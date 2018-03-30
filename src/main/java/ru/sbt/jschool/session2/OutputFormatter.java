@@ -32,12 +32,13 @@ public class OutputFormatter {
     }
 
     public void output(String[] names, Object[][] data) {
-        String splitter = data.length > 0 ? getHorizontalLine(names, data) : getHorizontalLineByHeader(names);
+        int[] columnWidths = getColumnWidth(names, data);
+        String splitter = data.length > 0 ? getHorizontalLine(columnWidths) : getHorizontalLineByHeader(names);
         out.println(splitter);
         String line = "|";
         if (data.length > 0) {
             for (int i = 0; i < names.length; i++) {
-                line += centerString(getColumnWidth(names, data, i), names[i]);
+                line += centerString(columnWidths[i], names[i]);
                 line += "|";
             }
         } else {
@@ -55,7 +56,7 @@ public class OutputFormatter {
             for (int column = 0; column < data[0].length; column++) {
                 Object object = data[row][column];
                 if (object instanceof Integer) {
-                    for (int j = 0; j < getColumnWidth(names, data, column) - getNumberNiceLook((Integer) object).length(); j++) {
+                    for (int j = 0; j < columnWidths[column] - getNumberNiceLook((Integer) object).length(); j++) {
                         line += " ";
                     }
                     line += getNumberNiceLook((Integer) object);
@@ -66,26 +67,26 @@ public class OutputFormatter {
                     line += date;
                 }
                 if (object instanceof Double) {
-                    for (int j = 0; j < getColumnWidth(names, data, column) - getMoneyNiceLook((Double) object).length(); j++) {
+                    for (int j = 0; j < columnWidths[column] - getMoneyNiceLook((Double) object).length(); j++) {
                         line += " ";
                     }
                     line += getMoneyNiceLook((Double) object);
                 }
                 if (object instanceof String) {
                     line += object;
-                    for (int i = 0; i < getColumnWidth(names, data, column) - (((String) object).length()); i++) {
+                    for (int i = 0; i < columnWidths[column] - (((String) object).length()); i++) {
                         line += " ";
                     }
                 }
                 if (object == null) {
                     if (getClassName(data, column) == "java.lang.String") {
                         line += "-";
-                        for (int i = 0; i < getColumnWidth(names, data, column) - 1; i++) {
+                        for (int i = 0; i < columnWidths[column] - 1; i++) {
                             line += " ";
                         }
                     }
                     if (getClassName(data, column) == "java.lang.Integer") {
-                        for (int i = 0; i < getColumnWidth(names, data, column) - 1; i++) {
+                        for (int i = 0; i < columnWidths[column] - 1; i++) {
                             line += " ";
                         }
                         line += "-";
@@ -94,7 +95,7 @@ public class OutputFormatter {
                 line += "|";
             }
             out.println(line);
-            out.println(getHorizontalLine(names, data));
+            out.println(splitter);
         }
     }
 
@@ -117,10 +118,10 @@ public class OutputFormatter {
         return decimalFormat.format(money);
     }
 
-    private String getHorizontalLine(String[] names, Object[][] data) {
+    private String getHorizontalLine(int[] columnWidths) {
         String line = "+";
-        for (int i = 0; i < data[0].length; i++) {
-            for (int j = 0; j < getColumnWidth(names, data, i); j++) {
+        for (int i = 0; i < columnWidths.length; i++) {
+            for (int j = 0; j < columnWidths[i]; j++) {
                 line += "-";
             }
             line += "+";
@@ -128,28 +129,32 @@ public class OutputFormatter {
         return line;
     }
 
-    private int getColumnWidth(String[] names, Object[][] data, int column) {
-        int width = names[column].length();
-        int buf;
-        for (int i = 0; i < data.length; i++) {
-            if (data[i][column] instanceof Integer) {
-                buf = getNumberNiceLook((Integer) data[i][column]).length();
-            } else if (data[i][column] instanceof Double) {
-                buf = getMoneyNiceLook((Double) data[i][column]).length();
-            } else {
-                buf = String.valueOf(data[i][column]).length();
+    private int[] getColumnWidth(String[] names, Object[][] data) {
+        int[] columnWidths = new int[names.length];
+        for (int column = 0; column < names.length; column++) {
+            int width = names[column].length();
+            int buf;
+            for (int i = 0; i < data.length; i++) {
+                if (data[i][column] instanceof Integer) {
+                    buf = getNumberNiceLook((Integer) data[i][column]).length();
+                } else if (data[i][column] instanceof Double) {
+                    buf = getMoneyNiceLook((Double) data[i][column]).length();
+                } else {
+                    buf = String.valueOf(data[i][column]).length();
+                }
+                if (data[i][column] == null) {
+                    buf = 1;
+                }
+                if (buf > width) {
+                    width = buf;
+                }
             }
-            if (data[i][column] == null) {
-                buf = 1;
+            if (data.length > 0 && data[0][column] instanceof Date) {
+                width = 10;
             }
-            if (buf > width) {
-                width = buf;
-            }
+            columnWidths[column] = width;
         }
-        if (data[0][column] instanceof Date) {
-            width = 10;
-        }
-        return width;
+        return columnWidths;
     }
 
     private String getHorizontalLineByHeader(String[] names) {
